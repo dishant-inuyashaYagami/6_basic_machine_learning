@@ -59,7 +59,7 @@ plt.axline((acidity[0], density[0]), slope=slope, linewidth=1, color='b')			# or
 
 
 # ==================================== Computes Batch Gradient at Parameters (a,b) =============================================================================
-def comp_grad(a, b, grad_val, error, start_range, end_range):
+def comp_grad(a, b, grad_val, start_range, end_range):
 	if num_iter % 1000 == 0:
 		print ("computing gradient at all points")
 	avg_grad = [0, 0]
@@ -74,15 +74,16 @@ def comp_grad(a, b, grad_val, error, start_range, end_range):
 	avg_grad[1]    =  grad_val[1]/(end_range - start_range)
 	grad_val	   =  avg_grad
 
+	if num_iter % 1000 == 0:
+		print("average error: " + str(error[0]));
+
+def comp_error(a, b, error):
 	for index in range(0, len(acidity)):					# compute the full average error
 		x  = acidity[index]
 		y  = density[index]
 		ht = a*x + b
 		pt_error = y - ht
 		error[0]  += pt_error*pt_error
-
-	if num_iter % 1000 == 0:
-		print("average error: " + str(error[0]));
 
 
 # ==================================== MAIN GD CALL ==================================================================================
@@ -96,32 +97,32 @@ num_iter = 0
 # error_difference > 0.000000001
 start = time.time()
 while (old_error[0] > 0.0000001) and num_iter < 100000:
+	
+	error = [0]
+	comp_error(slope, intercept, error)
+
 	grad_val  = [0,0]
-	error = [0.0]
 	batch_start_range = (num_iter*batch_size)%len(acidity)
 	if batch_size == len(acidity):
 			batch_end_range = len(acidity)
 	else:
 			batch_end_range   = ((num_iter*batch_size + batch_size)%len(acidity))
-	comp_grad (slope, intercept, grad_val, error, batch_start_range, batch_end_range)								# computing gradient
+	comp_grad (slope, intercept, grad_val, batch_start_range, batch_end_range)								# computing gradient
 	slope     = slope     - direction*learning_rate*grad_val[0];		# updating hypothesis
 	intercept = intercept - direction*learning_rate*grad_val[1];		# updating hypothesis
-	
 
 	if flag == 0:						# change direction if the error is not decreased after the first step
-		new_grad = [0,0]
 		new_error = [0]
-		comp_grad(slope, intercept, new_grad, new_error, batch_start_range, batch_end_range)
+		comp_error(slope, intercept, new_error)
 		if new_error[0] > error[0]:
 			print ("changing the direction of movement! restoring previous hypothesis . . .") 
 			slope 	  += direction*learning_rate*grad_val[0];
 			intercept += direction*learning_rate*grad_val[1];
 			direction = -1
-			num_iter += 1
 			continue
 		else:
 			print ("moving in the right direction... all good!") 
-		flag = 1
+			flag = 1	
 
 		# sometimes stuck here since gradient is computed over a batch; it might not always decrease the overall average error
 		# this is required as well since for small batches the error diverges after some time
